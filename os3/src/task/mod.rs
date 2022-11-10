@@ -18,6 +18,7 @@ use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
 use lazy_static::*;
+use crate::timer::{get_time,get_time_us};
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
@@ -54,6 +55,8 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
+            call_time:0,
+            call_num:[0;MAX_SYSCALL_NUM],
         }; MAX_APP_NUM];
         for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
             t.task_cx = TaskContext::goto_restore(init_app_cx(i));
@@ -80,6 +83,7 @@ impl TaskManager {
         let mut inner = self.inner.exclusive_access();
         let task0 = &mut inner.tasks[0];
         task0.task_status = TaskStatus::Running;
+        task0.call_time = get_time_us()/1000;
         let next_task_cx_ptr = &task0.task_cx as *const TaskContext;
         drop(inner);
         let mut _unused = TaskContext::zero_init();
@@ -122,6 +126,9 @@ impl TaskManager {
             let mut inner = self.inner.exclusive_access();
             let current = inner.current_task;
             inner.tasks[next].task_status = TaskStatus::Running;
+            if inner.tasks[next].call_time == 0{
+                inner.tasks[next].call_time = get_time_us()/1000;
+            }
             inner.current_task = next;
             let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
             let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
@@ -135,7 +142,36 @@ impl TaskManager {
             panic!("All applications completed!");
         }
     }
+    
+    fn get_current_task_num(&self) -> [u32;MAX_SYSCALL_NUM]{
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].call_num
+    }
+    
 
+    fn is_current_task(&self) -> bool{
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        if inner.tasks[current].task_status == TaskStatus::Running{
+            true
+        }else{
+            false
+        } 
+    }
+
+    fn add_current_call_num(&self,call_num:usize){
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].call_num[call_num] += 1;
+    }
+
+    fn get_current_task_time(&self) -> usize{
+        let mut inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].call_time
+    }
+    
     // LAB1: Try to implement your function to update or get task info!
 }
 
@@ -174,3 +210,19 @@ pub fn exit_current_and_run_next() {
 
 // LAB1: Public functions implemented here provide interfaces.
 // You may use TASK_MANAGER member functions to handle requests.
+
+pub fn get_current_task_time() -> usize{
+    TASK_MANAGER.get_current_task_time()
+}
+
+pub fn get_current_task_num() -> [u32;MAX_SYSCALL_NUM]{
+    TASK_MANAGER.get_current_task_num()
+}
+
+pub fn is_current_task() -> bool{
+    TASK_MANAGER.is_current_task()
+}
+
+pub fn add_current_call_num(call_num:usize){
+    TASK_MANAGER.add_current_call_num(call_num);
+}

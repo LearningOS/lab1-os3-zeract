@@ -3,7 +3,8 @@
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::task::{exit_current_and_run_next, suspend_current_and_run_next, TaskStatus};
 use crate::timer::get_time_us;
-
+use crate::timer::get_time;
+use crate::task::{get_current_task_num,get_current_task_time,is_current_task,add_current_call_num};
 #[repr(C)]
 #[derive(Debug)]
 pub struct TimeVal {
@@ -44,14 +45,17 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: usize) -> isize {
 
 /// YOUR JOB: Finish sys_task_info to pass testcases
 pub fn sys_task_info(ti: *mut TaskInfo) -> isize {
-    let num_app = get_num_app();
-    for i in 1..=num_app{
-        if TASK_MANAGER.inner.task[i].task_status == TaskStatus::Running{
-            ti.status = TaskStatus::Running;
-            ti.time = get_time()-TASK_MANAGER.inner.task[i].call_time;
-            ti.syscall_times = TASK_MANAGER.inner.task[i].call_num+1;
-            return 0;
+    if is_current_task()==true{
+        unsafe{
+            (*ti).status = TaskStatus::Running;
+            (*ti).time = get_time()-get_current_task_time();
+            add_current_call_num(410);
+            (*ti).syscall_times = get_current_task_num();
         }
+        
+        
+        return 0;
     }
+    
     -1
 }

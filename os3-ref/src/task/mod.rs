@@ -18,6 +18,7 @@ use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
 use lazy_static::*;
+use crate::timer::get_time;
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
 
@@ -54,10 +55,14 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
+            call_time:0,
+            call_num:0,
         }; MAX_APP_NUM];
         for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
             t.task_cx = TaskContext::goto_restore(init_app_cx(i));
             t.task_status = TaskStatus::Ready;
+            t.call_time = get_time();
+            t.call_num = 0;
         }
         TaskManager {
             num_app,
