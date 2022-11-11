@@ -7,8 +7,8 @@ use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 pub struct TaskControlBlock {
     pub task_status: TaskStatus,
     pub task_cx: TaskContext,
-    pub call_time:usize,
     pub call_num:[u32;MAX_SYSCALL_NUM],
+    pub call_time:usize,
     // LAB1: Add whatever you need about the Task.
 }
 

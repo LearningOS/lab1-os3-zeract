@@ -1,19 +1,9 @@
-//! Task management implementation
-//!
-//! Everything about task management, like starting and switching tasks is
-//! implemented here.
-//!
-//! A single global instance of [`TaskManager`] called `TASK_MANAGER` controls
-//! all the tasks in the operating system.
-//!
-//! Be careful when you see [`__switch`]. Control flow around this function
-//! might not be what you expect.
+
 
 mod context;
 mod switch;
 #[allow(clippy::module_inception)]
 mod task;
-
 use crate::config::{MAX_APP_NUM, MAX_SYSCALL_NUM};
 use crate::loader::{get_num_app, init_app_cx};
 use crate::sync::UPSafeCell;
@@ -21,7 +11,6 @@ use lazy_static::*;
 use crate::timer::{get_time,get_time_us};
 pub use switch::__switch;
 pub use task::{TaskControlBlock, TaskStatus};
-
 pub use context::TaskContext;
 
 /// The task manager, where all the tasks are managed.
@@ -55,8 +44,8 @@ lazy_static! {
         let mut tasks = [TaskControlBlock {
             task_cx: TaskContext::zero_init(),
             task_status: TaskStatus::UnInit,
-            call_time:0,
             call_num:[0;MAX_SYSCALL_NUM],
+            call_time:0,
         }; MAX_APP_NUM];
         for (i, t) in tasks.iter_mut().enumerate().take(num_app) {
             t.task_cx = TaskContext::goto_restore(init_app_cx(i));
