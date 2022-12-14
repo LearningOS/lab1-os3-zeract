@@ -9,6 +9,7 @@ SBI ?= rustsbi
 BOOTLOADER := ../bootloader/$(SBI)-$(BOARD).bin
 
 kernel:
+	rustup target add riscv64gc-unknown-none-elf
 	cargo build --release
 
 clean:
